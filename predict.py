@@ -10,7 +10,7 @@ from cog import BasePredictor, Path, Input, BaseModel
 
 class Output(BaseModel):
     input: str
-    embedding: str #List[float]
+    embedding: List[float]
 
 
 class Predictor(BasePredictor):
@@ -72,11 +72,11 @@ class Predictor(BasePredictor):
         for line in lines:
             if line in text_outputs:
                 outputs.append(
-                    Output(input=line, embedding=",".join(text_outputs[line].tolist()))
+                    Output(input=line, embedding=text_outputs[line].tolist())
                 )
             else:
                 outputs.append(
-                    Output(input=line, embedding=",".join(image_outputs[line].tolist()))
+                    Output(input=line, embedding=image_outputs[line].tolist())
                 )
 
         return outputs
