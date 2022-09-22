@@ -8,7 +8,7 @@ from transformers import CLIPProcessor, CLIPModel
 from cog import BasePredictor, Path, Input, BaseModel
 
 
-class Output(BaseModel):
+class NamedEmbedding(BaseModel):
     input: str
     embedding: List[float]
 
@@ -29,7 +29,7 @@ class Predictor(BasePredictor):
             description="Newline-separated inputs. Can either be strings of text or image URIs starting with http[s]://",
             default="a\nb",
         ),
-    ) -> List[Output]:
+    ) -> List[NamedEmbedding]:
 
         lines = []
         texts = []
@@ -77,11 +77,11 @@ class Predictor(BasePredictor):
         for line in lines:
             if line in text_outputs:
                 outputs.append(
-                    Output(input=line, embedding=text_outputs[line].tolist())
+                    NamedEmbedding(input=line, embedding=text_outputs[line].tolist())
                 )
             else:
                 outputs.append(
-                    Output(input=line, embedding=image_outputs[line].tolist())
+                    NamedEmbedding(input=line, embedding=image_outputs[line].tolist())
                 )
 
         return outputs
