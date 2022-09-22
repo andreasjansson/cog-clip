@@ -1,40 +1,82 @@
+import re
+import sys
+import requests
+from io import BytesIO
 from typing import List
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
-from cog import BasePredictor, Path, Input
+from cog import BasePredictor, Path, Input, BaseModel
+
+
+class Output(BaseModel):
+    input: str
+    embedding: str #List[float]
 
 
 class Predictor(BasePredictor):
     def setup(self):
         """Load the model into memory to make running multiple predictions efficient"""
-        model_id = "openai/clip-vit-large-patch14"  # downloaded to ./weights
-        self.model = CLIPModel.from_pretrained(
-            f"weights/{model_id}", local_files_only=True
-        ).to("cuda")
+        self.model = CLIPModel.from_pretrained("/weights", local_files_only=True).to(
+            "cuda"
+        )
         self.processor = CLIPProcessor.from_pretrained(
-            f"weights/{model_id}", local_files_only=True
+            "/weights", local_files_only=True
         )
 
     def predict(
         self,
-        image: Path = Input(description="Input Image."),
-        text: str = Input(
-            description='Description of the image, separate different descriptions with "|"'
+        inputs: str = Input(
+            description="Newline-separated inputs. Can either be strings of text or image URIs starting with http[s]://",
+            default="a\nb",
         ),
-    ) -> List[float]:
+    ) -> List[Output]:
 
-        image = Image.open(str(image))
-        text = [t.strip() for t in text.split("|")]
+        lines = []
+        texts = []
+        image_urls = []
+        images = []
+        for line in inputs.strip().splitlines():
+            line = line.strip()
+            lines.append(line)
+            if re.match("^https?://", line):
+                try:
+                    print(f"Downloading {line}", file=sys.stderr)
+                    image = Image.open(BytesIO(requests.get(line).content))
+                    images.append(image)
+                    image_urls.append(line)
+                except Exception as e:
+                    print(f"Failed to load {line}: {e}", file=sys.stderr)
+            else:
+                texts.append(line)
+
+        if not images:
+            images = None
+        if not texts:
+            texts = None
 
         inputs = self.processor(
-            text=text, images=image, return_tensors="pt", padding=True
+            text=texts, images=images, return_tensors="pt", padding=True
         ).to("cuda")
 
-        outputs = self.model(**inputs)
-        logits_per_image = (
-            outputs.logits_per_image
-        )  # this is the image-text similarity score
-        probs = logits_per_image.softmax(
-            dim=1
-        )  # we can take the softmax to get the label probabilities
-        return probs.tolist()[0]
+        text_embeds = self.model.get_text_features(
+            input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"]
+        )
+        image_embeds = self.model.get_image_features(
+            pixel_values=inputs["pixel_values"]
+        )
+
+        text_outputs = dict(zip(texts, text_embeds))
+        image_outputs = dict(zip(image_urls, image_embeds))
+
+        outputs = []
+        for line in lines:
+            if line in text_outputs:
+                outputs.append(
+                    Output(input=line, embedding=",".join(text_outputs[line].tolist()))
+                )
+            else:
+                outputs.append(
+                    Output(input=line, embedding=",".join(image_outputs[line].tolist()))
+                )
+
+        return outputs
