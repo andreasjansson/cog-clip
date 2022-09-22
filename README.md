@@ -27,7 +27,7 @@ outputs = model.predict(inputs=inputs)
 
 # output similarity of the three text lines with the image on line 4
 for i in range(3):
-    print(outputs[i].input)
-    print(cos_sim(outputs[i].embedding, outputs[3].embedding))
+    print(outputs[i]["input"])
+    print(cos_sim(outputs[i]["embedding"], outputs[3]["embedding"]))
     print()
 ```
