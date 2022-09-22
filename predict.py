@@ -58,15 +58,20 @@ class Predictor(BasePredictor):
             text=texts, images=images, return_tensors="pt", padding=True
         ).to("cuda")
 
-        text_embeds = self.model.get_text_features(
-            input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"]
-        )
-        image_embeds = self.model.get_image_features(
-            pixel_values=inputs["pixel_values"]
-        )
-
-        text_outputs = dict(zip(texts, text_embeds))
-        image_outputs = dict(zip(image_urls, image_embeds))
+        if texts:
+            text_embeds = self.model.get_text_features(
+                input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"]
+            )
+            text_outputs = dict(zip(texts, text_embeds))
+        else:
+            text_outputs = {}
+        if images:
+            image_embeds = self.model.get_image_features(
+                pixel_values=inputs["pixel_values"]
+            )
+            image_outputs = dict(zip(image_urls, image_embeds))
+        else:
+            iamge_outputs = {}
 
         outputs = []
         for line in lines:
