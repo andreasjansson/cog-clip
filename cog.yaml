@@ -16,3 +16,5 @@ build:
     - cd weights && git lfs pull
 
 predict: "predict.py:Predictor"
+
+image: "r8.im/andreasjansson/clip-features"
