@@ -55,7 +55,7 @@ class Predictor(BasePredictor):
             texts = None
 
         inputs = self.processor(
-            text=texts, images=images, return_tensors="pt", padding=True
+            text=texts, images=images, return_tensors="pt", padding=True, truncation=True
         ).to("cuda")
 
         if texts:
