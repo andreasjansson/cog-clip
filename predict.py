@@ -1,5 +1,6 @@
 import re
 import sys
+import base64
 import requests
 from io import BytesIO
 from typing import List
@@ -26,7 +27,7 @@ class Predictor(BasePredictor):
     def predict(
         self,
         inputs: str = Input(
-            description="Newline-separated inputs. Can either be strings of text or image URIs starting with http[s]://",
+            description="Newline-separated inputs. Can either be strings of text or image URIs starting with http[s]:// or base64 encoded images starting with 'data:image/'",
             default="a\nb",
         ),
     ) -> List[NamedEmbedding]:
@@ -46,6 +47,15 @@ class Predictor(BasePredictor):
                     image_urls.append(line)
                 except Exception as e:
                     print(f"Failed to load {line}: {e}", file=sys.stderr)
+            elif re.match("^data:image/", line):
+                try:
+                    print(f"Decoding base64 image", file=sys.stderr)
+                    base64_data = re.sub('^data:image/.+;base64,', '', line)
+                    image = Image.open(BytesIO(base64.b64decode(base64_data)))
+                    images.append(image)
+                    image_urls.append(line)
+                except Exception as e:
+                    print(f"Failed to decode base64 image: {e}", file=sys.stderr)
             else:
                 texts.append(line)
 
@@ -71,7 +81,7 @@ class Predictor(BasePredictor):
             )
             image_outputs = dict(zip(image_urls, image_embeds))
         else:
-            iamge_outputs = {}
+            image_outputs = {}
 
         outputs = []
         for line in lines:
