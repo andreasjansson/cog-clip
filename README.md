@@ -4,6 +4,9 @@
 
 Cog model that outputs CLIP features for text and images.
 
+Credit to andreas jansson for the original github repo which was tweaked to allow B64 Support.
+https://github.com/andreasjansson/cog-clip/blob/main/predict.py
+
 Run with the API:
 
 ```
